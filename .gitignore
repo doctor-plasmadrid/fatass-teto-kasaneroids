@@ -1,0 +1,33 @@
+# Compiled Object files
+*.o
+*.obj
+
+# Executables
+*.exe
+*.out
+*.app
+bin/
+*.a
+
+# IDE specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Build directories
+obj/
+build/
+dist/
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Raylib temporary files
+*.raylib
+
+# Dependency files
+*.d
+*.dSYM/
