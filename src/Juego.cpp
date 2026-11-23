@@ -97,7 +97,7 @@ void colisionNaveAsteroides(GameState& gameState) {
     }
 }
 
-void colisionesDisparos(GameState& gameState) {
+void colisionesDisparos(GameState& gameState, Sound& golpeSound) {
     auto& disparos = gameState.getDisparos();
     auto& campoAsteroides = gameState.getCampoAsteroides();
     auto& especial = gameState.getEspecial();
@@ -109,6 +109,7 @@ void colisionesDisparos(GameState& gameState) {
             for (int j = 0; j < astsVivos; j++) {
 
                 if (disparos[i].colision(campoAsteroides[j]) && !finGolpe) {
+                    PlaySound(golpeSound);
                     disparos[i].desactivar();
 
                     if (campoAsteroides[j].getLados() <= 3) {
@@ -131,6 +132,7 @@ void colisionesDisparos(GameState& gameState) {
         for (int j = 0; j < astsVivos; j++) {
 
             if (especial.colision(campoAsteroides[j])) {
+                PlaySound(golpeSound);
                 if (campoAsteroides[j].getLados() <= 3) {
                     campoAsteroides[j] = campoAsteroides[astsVivos - 1];
                     gameState.setAstsVivos(astsVivos - 1);
@@ -149,7 +151,7 @@ void colisionesDisparos(GameState& gameState) {
     }
 }
 
-void actualizarEstado(GameState& gameState){
+void actualizarEstado(GameState& gameState, Sound& golpeSound){
     moverNaveHorizontal(gameState);
     moverAstsCampo(gameState);
     rotarAstsCampo(gameState);
@@ -164,7 +166,7 @@ void actualizarEstado(GameState& gameState){
     auto& especial = gameState.getEspecial();
     especial.actualizar(0);
 
-    colisionesDisparos(gameState);
+    colisionesDisparos(gameState, golpeSound);
     colisionNaveAsteroides(gameState);
 }
 
@@ -242,8 +244,9 @@ void pintaNave(GameState& gameState, Texture2D& peartoTexture, Texture2D& tetoCh
     DrawTextureEx(*selectedTexture, texturePos, 0.0f, scale, WHITE);
 }
 
-void reiniciarJuego(GameState& gameState) {
+void reiniciarJuego(GameState& gameState, Sound& nivelSound) {
     gameState.reiniciar();
+    PlaySound(nivelSound);
 }
 
 int main(){
@@ -255,21 +258,24 @@ int main(){
         int opcionSeleccionada = 0;
         int personajeSeleccionado = 0;
         SetTargetFPS(60);
+        InitAudioDevice();
 
-        Texture2D tetoTexture = LoadTexture("assets/fatass_teto.png");
-        Texture2D peartoTexture = LoadTexture("assets/pearto.png");
-        Texture2D tetoCharTexture = LoadTexture("assets/teto.png");
-        Texture2D drTetoTexture = LoadTexture("assets/dr_teto.png");
-        Texture2D mikuTexture = LoadTexture("assets/miku.png");
-        Texture2D neruTexture = LoadTexture("assets/neru.png");
-        Texture2D lukaTexture = LoadTexture("assets/luka.png");
-        Texture2D kaitoTexture = LoadTexture("assets/kaito.png");
-        Texture2D gumiTexture = LoadTexture("assets/gumi.png");
-        Texture2D rinTexture = LoadTexture("assets/rin.png");
-        Texture2D lenTexture = LoadTexture("assets/len.png");
-        Texture2D meikoTexture = LoadTexture("assets/meiko.png");
-        Texture2D reiTexture = LoadTexture("assets/rei.png");
-        Texture2D baguetteTexture = LoadTexture("assets/baguette.png");
+        Sound nivelSound = LoadSound("assets/sfx/teto.wav");
+
+        Texture2D tetoTexture = LoadTexture("assets/images/fatass_teto.png");
+        Texture2D peartoTexture = LoadTexture("assets/images/pearto.png");
+        Texture2D tetoCharTexture = LoadTexture("assets/images/teto.png");
+        Texture2D drTetoTexture = LoadTexture("assets/images/dr_teto.png");
+        Texture2D mikuTexture = LoadTexture("assets/images/miku.png");
+        Texture2D neruTexture = LoadTexture("assets/images/neru.png");
+        Texture2D lukaTexture = LoadTexture("assets/images/luka.png");
+        Texture2D kaitoTexture = LoadTexture("assets/images/kaito.png");
+        Texture2D gumiTexture = LoadTexture("assets/images/gumi.png");
+        Texture2D rinTexture = LoadTexture("assets/images/rin.png");
+        Texture2D lenTexture = LoadTexture("assets/images/len.png");
+        Texture2D meikoTexture = LoadTexture("assets/images/meiko.png");
+        Texture2D reiTexture = LoadTexture("assets/images/rei.png");
+        Texture2D baguetteTexture = LoadTexture("assets/images/baguette.png");
 
         gameState.getEspecial().disparoEspecial();
 
@@ -300,22 +306,23 @@ int main(){
                 } else if (IsKeyPressed(KEY_ENTER)) {
                     gameState.setModoInfinito(opcionSeleccionada == 1);
                     gameState.setPersonajeSeleccionado(personajeSeleccionado);
-                    reiniciarJuego(gameState);
+                    reiniciarJuego(gameState, nivelSound);
                     pantallaPersonaje = false;
                 }
             } else if (gameState.getEstadoGameOver()) {
                 if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_R)) {
-                    reiniciarJuego(gameState);
+                    reiniciarJuego(gameState, nivelSound);
                 }
             } else if (gameState.getEstadoVictoria()) {
                 if (gameState.getModoInfinito()) {
                     if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_R)) {
                         gameState.siguienteNivel();
+                        PlaySound(nivelSound);
                         gameState.setEstadoVictoria(false);
                     }
                 } else {
                     if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_R)) {
-                        reiniciarJuego(gameState);
+                        reiniciarJuego(gameState, nivelSound);
                     }
                 }
             } else {
@@ -344,7 +351,7 @@ int main(){
                     }
                     gameState.setTiempoCarga(0.0);
                 }
-                actualizarEstado(gameState);
+                actualizarEstado(gameState, nivelSound);
 
                 if (gameState.getAstsVivos() <= 0) {
                     gameState.setEstadoVictoria(true);
@@ -508,6 +515,8 @@ int main(){
         UnloadTexture(meikoTexture);
         UnloadTexture(reiTexture);
         UnloadTexture(baguetteTexture);
+        UnloadSound(nivelSound);
+        CloseAudioDevice();
         CloseWindow();
         return 0;
 }
