@@ -21,6 +21,9 @@ private:
     int vidasJugador;
     bool estadoGameOver;
     bool estadoVictoria;
+    bool modoInfinito;
+    int nivel;
+    int personajeSeleccionado;
 
     std::vector<Asteroide> campoAsteroides;
     std::vector<Bala> disparos;
@@ -43,6 +46,9 @@ public:
     int getVidasJugador() const { return vidasJugador; }
     bool getEstadoGameOver() const { return estadoGameOver; }
     bool getEstadoVictoria() const { return estadoVictoria; }
+    bool getModoInfinito() const { return modoInfinito; }
+    int getNivel() const { return nivel; }
+    int getPersonajeSeleccionado() const { return personajeSeleccionado; }
 
     Asteroide& getNave() { return nave; }
     const Asteroide& getNave() const { return nave; }
@@ -60,9 +66,13 @@ public:
     void setVidasJugador(int value) { vidasJugador = value; }
     void setEstadoGameOver(bool value) { estadoGameOver = value; }
     void setEstadoVictoria(bool value) { estadoVictoria = value; }
+    void setModoInfinito(bool value) { modoInfinito = value; }
+    void setNivel(int value) { nivel = value; }
+    void setPersonajeSeleccionado(int value) { personajeSeleccionado = value; }
 
     // Methods
     void reiniciar();
+    void siguienteNivel();
 };
 
 #endif
