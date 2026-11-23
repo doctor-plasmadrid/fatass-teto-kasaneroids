@@ -54,20 +54,23 @@ void colisionBorde(GameState& gameState){
     }
 }
 
-void moverNaveHorizontal(GameState& gameState) {
+void moverNaveTeclas(Asteroide& nave, float ancho, int izq1, int izq2, int der1, int der2, bool vivo) {
+    if (!vivo) {
+        return;
+    }
+
     float velocidad = 7.0;
-    auto& nave = gameState.getNave();
     float xActual = nave.getCentro().getX();
     float radio = nave.getRadio();
 
     Punto2D velocidadNave(0.0, 0.0);
 
-    if (IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A)) {
+    if (IsKeyDown(izq1) || IsKeyDown(izq2)) {
         if (xActual - radio > 0) {
             velocidadNave.setXY(-velocidad, 0.0);
         }
-    } else if (IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D)) {
-        if (xActual + radio < gameState.getAncho()) {
+    } else if (IsKeyDown(der1) || IsKeyDown(der2)) {
+        if (xActual + radio < ancho) {
             velocidadNave.setXY(velocidad, 0.0);
         }
     }
@@ -76,31 +79,50 @@ void moverNaveHorizontal(GameState& gameState) {
     nave.mover();
 }
 
+void moverNaveHorizontal(GameState& gameState) {
+    moverNaveTeclas(gameState.getNave(), gameState.getAncho(),
+                    KEY_LEFT, KEY_A, KEY_RIGHT, KEY_D,
+                    gameState.getVidasJugador() > 0);
+    moverNaveTeclas(gameState.getNave2(), gameState.getAncho(),
+                    KEY_J, KEY_NULL, KEY_L, KEY_NULL,
+                    gameState.getVidasJugador2() > 0);
+}
+
 void colisionNaveAsteroides(GameState& gameState) {
     auto& campoAsteroides = gameState.getCampoAsteroides();
-    auto& nave = gameState.getNave();
     int astsVivos = gameState.getAstsVivos();
+    int vidas1 = gameState.getVidasJugador();
+    int vidas2 = gameState.getVidasJugador2();
 
-    for (int i = 0; i < astsVivos; i++) {
-        if (nave.colision(campoAsteroides[i])) {
-            gameState.setVidasJugador(gameState.getVidasJugador() - 1);
+    auto revisarNave = [&](Asteroide& nave, int& vidas) {
+        if (vidas <= 0) {
+            return;
+        }
+        for (int i = 0; i < astsVivos; i++) {
+            if (nave.colision(campoAsteroides[i])) {
+                vidas--;
 
-            campoAsteroides[i] = campoAsteroides[astsVivos - 1];
-            gameState.setAstsVivos(astsVivos - 1);
-            astsVivos--;
-            i--;
-
-            if (gameState.getVidasJugador() <= 0) {
-                gameState.setEstadoGameOver(true);
+                campoAsteroides[i] = campoAsteroides[astsVivos - 1];
+                astsVivos--;
+                i--;
             }
         }
+    };
+
+    revisarNave(gameState.getNave(), vidas1);
+    revisarNave(gameState.getNave2(), vidas2);
+
+    gameState.setAstsVivos(astsVivos);
+    gameState.setVidasJugador(vidas1);
+    gameState.setVidasJugador2(vidas2);
+
+    if (vidas1 <= 0 && vidas2 <= 0) {
+        gameState.setEstadoGameOver(true);
     }
 }
 
-void colisionesDisparos(GameState& gameState, Sound& golpeSound) {
-    auto& disparos = gameState.getDisparos();
+void colisionesDisparosLote(std::vector<Bala>& disparos, Bala& especial, GameState& gameState, Sound& golpeSound) {
     auto& campoAsteroides = gameState.getCampoAsteroides();
-    auto& especial = gameState.getEspecial();
     int astsVivos = gameState.getAstsVivos();
     bool finGolpe = false;
 
@@ -151,6 +173,11 @@ void colisionesDisparos(GameState& gameState, Sound& golpeSound) {
     }
 }
 
+void colisionesDisparos(GameState& gameState, Sound& golpeSound) {
+    colisionesDisparosLote(gameState.getDisparos(), gameState.getEspecial(), gameState, golpeSound);
+    colisionesDisparosLote(gameState.getDisparos2(), gameState.getEspecial2(), gameState, golpeSound);
+}
+
 void actualizarEstado(GameState& gameState, Sound& golpeSound){
     moverNaveHorizontal(gameState);
     moverAstsCampo(gameState);
@@ -163,11 +190,48 @@ void actualizarEstado(GameState& gameState, Sound& golpeSound){
         disparos[i].actualizar(0);
     }
 
+    auto& disparos2 = gameState.getDisparos2();
+    for (int i = 0; i < gameState.getNumDisp(); i++) {
+        disparos2[i].actualizar(0);
+    }
+
     auto& especial = gameState.getEspecial();
     especial.actualizar(0);
 
+    auto& especial2 = gameState.getEspecial2();
+    especial2.actualizar(0);
+
     colisionesDisparos(gameState, golpeSound);
     colisionNaveAsteroides(gameState);
+}
+
+void manejarDisparoJugador(GameState& gameState, int tecla1, int tecla2,
+                           Asteroide& nave, std::vector<Bala>& disparos,
+                           Bala& especial, float& tiempoCarga) {
+    float posXNave = nave.getCentro().getX();
+    float posYNave = nave.getCentro().getY();
+    bool fuegoAbajo = IsKeyDown(tecla1) || (tecla2 != KEY_NULL && IsKeyDown(tecla2));
+    bool fuegoSueltas = IsKeyReleased(tecla1) || (tecla2 != KEY_NULL && IsKeyReleased(tecla2));
+
+    if (fuegoAbajo) {
+        tiempoCarga += GetFrameTime();
+
+        if (tiempoCarga >= gameState.getTiempoEspecial() && !especial.isActiva()) {
+            especial.disparar(posXNave, posYNave);
+            tiempoCarga = 0.0;
+        }
+    } else if (fuegoSueltas) {
+        if (tiempoCarga > 0.0 && tiempoCarga < gameState.getTiempoEspecial()) {
+            bool disparado = false;
+            for (int i = 0; i < gameState.getNumDisp(); i++) {
+                if (!disparos[i].isActiva() && !disparado) {
+                    disparos[i].disparar(posXNave, posYNave);
+                    disparado = true;
+                }
+            }
+        }
+        tiempoCarga = 0.0;
+    }
 }
 
 void pintaAsteroides(GameState& gameState, Texture2D& tetoTexture){
@@ -181,9 +245,13 @@ void pintaAsteroides(GameState& gameState, Texture2D& tetoTexture){
         float radio = campoAsteroides[i].getRadio();
 
         float scale = ((radio * 2.0f) / tetoTexture.width) * 3.0f;
-        Vector2 texturePos = { centro.x - (radio * 3.0f), centro.y - (radio * 3.0f) };
+        float scaledWidth = tetoTexture.width * scale * 1.3f;
+        float scaledHeight = tetoTexture.height * scale;
 
-        DrawTextureEx(tetoTexture, texturePos, 0.0f, scale, WHITE);
+        Rectangle srcTex = { 0, 0, (float)tetoTexture.width, (float)tetoTexture.height };
+        Rectangle dstTex = { centro.x - (scaledWidth / 2.0f), centro.y - (radio * 3.0f), scaledWidth, scaledHeight };
+
+        DrawTexturePro(tetoTexture, srcTex, dstTex, { 0, 0 }, 0.0f, WHITE);
 
         DrawPoly(centro, campoAsteroides[i].getLados(), radio, campoAsteroides[i].getGiro(), maroonAlpha);
 
@@ -191,10 +259,8 @@ void pintaAsteroides(GameState& gameState, Texture2D& tetoTexture){
     }
 }
 
-void pintaDisparos(GameState& gameState, Texture2D& baguetteTexture) {
-    auto& disparos = gameState.getDisparos();
-    auto& especial = gameState.getEspecial();
-    for (int i = 0; i < gameState.getNumDisp(); i++) {
+void pintaPoolDisparos(std::vector<Bala>& disparos, Bala& especial, Texture2D& baguetteTexture) {
+    for (int i = 0; i < (int)disparos.size(); i++) {
         if (disparos[i].isActiva()) {
             Vector2 pos = { disparos[i].getCentro().getX(), disparos[i].getCentro().getY() };
             DrawCircleV(pos, disparos[i].getRadio(), YELLOW);
@@ -212,13 +278,17 @@ void pintaDisparos(GameState& gameState, Texture2D& baguetteTexture) {
     }
 }
 
-void pintaNave(GameState& gameState, Texture2D& peartoTexture, Texture2D& tetoCharTexture, Texture2D& drTetoTexture, Texture2D& mikuTexture, Texture2D& neruTexture, Texture2D& lukaTexture, Texture2D& kaitoTexture, Texture2D& gumiTexture, Texture2D& rinTexture, Texture2D& lenTexture, Texture2D& meikoTexture, Texture2D& reiTexture){
-    auto& nave = gameState.getNave();
+void pintaDisparos(GameState& gameState, Texture2D& baguetteTexture) {
+    pintaPoolDisparos(gameState.getDisparos(), gameState.getEspecial(), baguetteTexture);
+    pintaPoolDisparos(gameState.getDisparos2(), gameState.getEspecial2(), baguetteTexture);
+}
+
+void pintaNave(Asteroide& nave, int personaje, Texture2D& peartoTexture, Texture2D& tetoCharTexture, Texture2D& drTetoTexture, Texture2D& mikuTexture, Texture2D& neruTexture, Texture2D& lukaTexture, Texture2D& kaitoTexture, Texture2D& gumiTexture, Texture2D& rinTexture, Texture2D& lenTexture, Texture2D& meikoTexture, Texture2D& reiTexture){
     Vector2 centro = { nave.getCentro().getX(), nave.getCentro().getY() };
     float radio = nave.getRadio();
 
     Texture2D* selectedTexture;
-    switch (gameState.getPersonajeSeleccionado()) {
+    switch (personaje) {
         case 0: selectedTexture = &tetoCharTexture; break;
         case 1: selectedTexture = &drTetoTexture; break;
         case 2: selectedTexture = &peartoTexture; break;
@@ -249,18 +319,31 @@ void reiniciarJuego(GameState& gameState, Sound& nivelSound) {
     PlaySound(nivelSound);
 }
 
+bool otraTeclaPresionada() {
+    for (int k = 1; k < 400; k++) {
+        if (k != KEY_ENTER && k != KEY_R && IsKeyPressed(k)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 int main(){
         GameState gameState;
         InitWindow(gameState.getAncho(), gameState.getAlto(), "Fatass Teto Kasaneroids");
         bool pantallaTitulo = true;
+        bool pantallaJugadores = false;
         bool pantallaSeleccion = false;
         bool pantallaPersonaje = false;
         int opcionSeleccionada = 0;
+        int jugadoresSeleccionados = 1;
         int personajeSeleccionado = 0;
+        int jugadorActual = 1;
         SetTargetFPS(60);
         InitAudioDevice();
 
         Sound nivelSound = LoadSound("assets/sfx/teto.wav");
+        Music musica = LoadMusicStream("assets/sfx/fukkireta.wav");
 
         Texture2D tetoTexture = LoadTexture("assets/images/fatass_teto.png");
         Texture2D peartoTexture = LoadTexture("assets/images/pearto.png");
@@ -276,14 +359,39 @@ int main(){
         Texture2D meikoTexture = LoadTexture("assets/images/meiko.png");
         Texture2D reiTexture = LoadTexture("assets/images/rei.png");
         Texture2D baguetteTexture = LoadTexture("assets/images/baguette.png");
+        Texture2D backgroundTexture = LoadTexture("assets/images/background.png");
 
         gameState.getEspecial().disparoEspecial();
 
         while(!WindowShouldClose()){
+            bool enPartida = !pantallaTitulo && !pantallaJugadores && !pantallaSeleccion && !pantallaPersonaje &&
+                             !gameState.getEstadoGameOver() && !gameState.getEstadoVictoria();
+
+            if (enPartida) {
+                if (!IsMusicStreamPlaying(musica)) {
+                    PlayMusicStream(musica);
+                }
+            } else {
+                if (IsMusicStreamPlaying(musica)) {
+                    StopMusicStream(musica);
+                }
+            }
+            UpdateMusicStream(musica);
+
             if(pantallaTitulo){
                 if(IsKeyPressed(KEY_ENTER)){
                     pantallaTitulo = false;
+                    pantallaJugadores = true;
+                }
+            } else if (pantallaJugadores) {
+                if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) {
+                    jugadoresSeleccionados = 1;
+                } else if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S)) {
+                    jugadoresSeleccionados = 2;
+                } else if (IsKeyPressed(KEY_ENTER)) {
+                    pantallaJugadores = false;
                     pantallaSeleccion = true;
+                    jugadorActual = 1;
                 }
             } else if (pantallaSeleccion) {
                 if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) {
@@ -295,23 +403,46 @@ int main(){
                     pantallaPersonaje = true;
                 }
             } else if (pantallaPersonaje) {
+                int personajeP1 = gameState.getPersonajeSeleccionado();
+                auto moverSeleccion = [&](int delta) {
+                    int idx = personajeSeleccionado;
+                    do {
+                        idx = (idx + delta + 12) % 12;
+                    } while (jugadorActual == 2 && idx == personajeP1);
+                    personajeSeleccionado = idx;
+                };
+
                 if (IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_A)) {
-                    personajeSeleccionado = (personajeSeleccionado - 1 + 12) % 12;
+                    moverSeleccion(-1);
                 } else if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_D)) {
-                    personajeSeleccionado = (personajeSeleccionado + 1) % 12;
+                    moverSeleccion(1);
                 } else if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) {
-                    personajeSeleccionado = (personajeSeleccionado - 4 + 12) % 12;
+                    moverSeleccion(-4);
                 } else if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S)) {
-                    personajeSeleccionado = (personajeSeleccionado + 4) % 12;
+                    moverSeleccion(4);
                 } else if (IsKeyPressed(KEY_ENTER)) {
-                    gameState.setModoInfinito(opcionSeleccionada == 1);
-                    gameState.setPersonajeSeleccionado(personajeSeleccionado);
-                    reiniciarJuego(gameState, nivelSound);
-                    pantallaPersonaje = false;
+                    if (jugadorActual == 1) {
+                        gameState.setModoInfinito(opcionSeleccionada == 1);
+                        gameState.setDosJugadores(jugadoresSeleccionados == 2);
+                        gameState.setPersonajeSeleccionado(personajeSeleccionado);
+                        if (jugadoresSeleccionados == 2) {
+                            jugadorActual = 2;
+                            personajeSeleccionado = (personajeSeleccionado + 1) % 12;
+                        } else {
+                            reiniciarJuego(gameState, nivelSound);
+                            pantallaPersonaje = false;
+                        }
+                    } else {
+                        gameState.setPersonajeSeleccionado2(personajeSeleccionado);
+                        reiniciarJuego(gameState, nivelSound);
+                        pantallaPersonaje = false;
+                    }
                 }
             } else if (gameState.getEstadoGameOver()) {
                 if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_R)) {
                     reiniciarJuego(gameState, nivelSound);
+                } else if (otraTeclaPresionada()) {
+                    pantallaTitulo = true;
                 }
             } else if (gameState.getEstadoVictoria()) {
                 if (gameState.getModoInfinito()) {
@@ -323,33 +454,20 @@ int main(){
                 } else {
                     if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_R)) {
                         reiniciarJuego(gameState, nivelSound);
+                    } else if (otraTeclaPresionada()) {
+                        pantallaTitulo = true;
                     }
                 }
             } else {
-                auto& nave = gameState.getNave();
-                auto& especial = gameState.getEspecial();
-                auto& disparos = gameState.getDisparos();
-                float posXNave = nave.getCentro().getX();
-                float posYNave = nave.getCentro().getY();
-
-                if (IsKeyDown(KEY_W) || IsKeyDown(KEY_UP)) {
-                    gameState.setTiempoCarga(gameState.getTiempoCarga() + GetFrameTime());
-
-                    if (gameState.getTiempoCarga() >= gameState.getTiempoEspecial() && !especial.isActiva()) {
-                        especial.disparar(posXNave, posYNave);
-                        gameState.setTiempoCarga(0.0);
-                    }
-                } else if (IsKeyReleased(KEY_W) || IsKeyReleased(KEY_UP)) {
-                    if (gameState.getTiempoCarga() > 0.0 && gameState.getTiempoCarga() < gameState.getTiempoEspecial()) {
-                        bool disparado = false;
-                        for (int i = 0; i < gameState.getNumDisp(); i++) {
-                            if (!disparos[i].isActiva() && !disparado) {
-                                disparos[i].disparar(posXNave, posYNave);
-                                disparado = true;
-                            }
-                        }
-                    }
-                    gameState.setTiempoCarga(0.0);
+                if (gameState.getVidasJugador() > 0) {
+                    manejarDisparoJugador(gameState, KEY_W, KEY_UP,
+                                          gameState.getNave(), gameState.getDisparos(),
+                                          gameState.getEspecial(), gameState.getTiempoCarga());
+                }
+                if (gameState.getVidasJugador2() > 0) {
+                    manejarDisparoJugador(gameState, KEY_I, KEY_NULL,
+                                          gameState.getNave2(), gameState.getDisparos2(),
+                                          gameState.getEspecial2(), gameState.getTiempoCarga2());
                 }
                 actualizarEstado(gameState, nivelSound);
 
@@ -365,6 +483,25 @@ int main(){
                 DrawText("Fatass Teto Kasaneroids", 200, 120, 20, RED);
                 DrawText("Press Enter", 200, 160, 20, BLUE);
                 DrawText("v0.1, Dr. Plasmadrid", 200, 180, 20, BLACK);
+            } else if (pantallaJugadores) {
+                DrawText("Select Players", 200, 150, 20, BLACK);
+
+                Rectangle btn1P = { 170, 200, 300, 50 };
+                Rectangle btn2P = { 170, 280, 300, 50 };
+
+                Color btnColor1P = jugadoresSeleccionados == 1 ? DARKGRAY : LIGHTGRAY;
+                Color btnColor2P = jugadoresSeleccionados == 2 ? DARKGRAY : LIGHTGRAY;
+
+                DrawRectangleRec(btn1P, btnColor1P);
+                DrawRectangleRec(btn2P, btnColor2P);
+
+                int anchoTxt1P = MeasureText("1 Player", 20);
+                int anchoTxt2P = MeasureText("2 Players", 20);
+
+                DrawText("1 Player", (640 - anchoTxt1P) / 2, 215, 20, BLACK);
+                DrawText("2 Players", (640 - anchoTxt2P) / 2, 295, 20, BLACK);
+
+                DrawText("Use UP/DOWN or W/S to select, ENTER to continue", 130, 350, 15, DARKGRAY);
             } else if (pantallaSeleccion) {
                 DrawText("Select Game Mode", 200, 150, 20, BLACK);
 
@@ -385,7 +522,8 @@ int main(){
 
                 DrawText("Use UP/DOWN or W/S to select, ENTER to continue", 130, 350, 15, DARKGRAY);
             } else if (pantallaPersonaje) {
-                DrawText("Select Your Character", 200, 80, 20, BLACK);
+                string tituloSel = "Player " + to_string(jugadorActual) + " - Select Your Character";
+                DrawText(tituloSel.c_str(), 200, 80, 20, BLACK);
 
                 float iconSize = 80.0f;
                 float startX = 20.0f;
@@ -418,6 +556,11 @@ int main(){
                     Rectangle slotRect = { slots[i].x, slots[i].y, iconSize, iconSize };
                     Color bgColor = (i == personajeSeleccionado) ? DARKGRAY : LIGHTGRAY;
                     DrawRectangleRec(slotRect, bgColor);
+
+                    if (jugadorActual == 2 && i == gameState.getPersonajeSeleccionado()) {
+                        DrawRectangleLines((int)slots[i].x, (int)slots[i].y, (int)iconSize, (int)iconSize, RED);
+                        DrawText("P1", static_cast<int>(slots[i].x + iconSize - 22), static_cast<int>(slots[i].y + 2), 16, RED);
+                    }
 
                     float scaleWidth = iconSize / slots[i].texture->width;
                     float scaleHeight = iconSize / slots[i].texture->height;
@@ -456,33 +599,42 @@ int main(){
                 DrawText(txtReinicio, (gameState.getAncho() / 2) - (anchoTxt2 / 2), (gameState.getAlto() / 2) + 10, 20, DARKGRAY);
 
             } else {
+                Rectangle srcBg = { 0, 0, (float)backgroundTexture.width, (float)backgroundTexture.height };
+                Rectangle dstBg = { 0, 0, (float)gameState.getAncho(), (float)gameState.getAlto() };
+                DrawTexturePro(backgroundTexture, srcBg, dstBg, { 0, 0 }, 0.0f, WHITE);
+
                 string s = "Asteroids: " + to_string(gameState.getAstsVivos());
                 if (gameState.getModoInfinito()) {
                     s += " | Level: " + to_string(gameState.getNivel());
                 }
-                DrawText(s.c_str(), 10, 10, 20, BLACK);
+                DrawText(s.c_str(), 10, 10, 20, WHITE);
 
-                if (gameState.getVidasJugador() <= 3) {
-                    string textoVidas = "";
-                    for(int i = 0; i < gameState.getVidasJugador(); i++) {
-                        textoVidas += "<3 ";
+                auto dibujaVidas = [&](int vidas, int y) {
+                    if (vidas <= 3) {
+                        string textoVidas = "";
+                        for (int i = 0; i < vidas; i++) {
+                            textoVidas += "<3 ";
+                        }
+                        int anchoVidas = MeasureText(textoVidas.c_str(), 20);
+                        DrawText(textoVidas.c_str(), gameState.getAncho() - anchoVidas - 10, y, 20, RED);
+                    } else {
+                        string textoVidas = to_string(vidas) + "x ";
+                        int anchoNumero = MeasureText(textoVidas.c_str(), 20);
+                        int anchoCorazon = MeasureText("<3", 20);
+                        int xPos = gameState.getAncho() - anchoNumero - anchoCorazon - 10;
+                        DrawText(textoVidas.c_str(), xPos, y, 20, WHITE);
+                        DrawText("<3", xPos + anchoNumero, y, 20, RED);
                     }
-                    int anchoVidas = MeasureText(textoVidas.c_str(), 20);
-                    DrawText(textoVidas.c_str(), gameState.getAncho() - anchoVidas - 10, 10, 20, RED);
-                } else {
-                    string textoVidas = to_string(gameState.getVidasJugador()) + "x ";
-                    int anchoNumero = MeasureText(textoVidas.c_str(), 20);
-                    int anchoCorazon = MeasureText("<3", 20);
-                    int xPos = gameState.getAncho() - anchoNumero - anchoCorazon - 10;
-                    DrawText(textoVidas.c_str(), xPos, 10, 20, BLACK);
-                    DrawText("<3", xPos + anchoNumero, 10, 20, RED);
-                }
+                };
+                dibujaVidas(gameState.getVidasJugador(), 10);
+                dibujaVidas(gameState.getVidasJugador2(), 35);
 
-                auto& nave = gameState.getNave();
-
-                if (gameState.getTiempoCarga() > 0) {
-                    float porcentaje = gameState.getTiempoCarga() / gameState.getTiempoEspecial();
-                    if (porcentaje > 1.0){
+                auto dibujaCarga = [&](Asteroide& nave, float carga, bool vivo) {
+                    if (!vivo || carga <= 0) {
+                        return;
+                    }
+                    float porcentaje = carga / gameState.getTiempoEspecial();
+                    if (porcentaje > 1.0) {
                         porcentaje = 1.0;
                     }
 
@@ -491,11 +643,18 @@ int main(){
                     if (porcentaje >= 1.0) {
                         DrawText("Boom!", nave.getCentro().getX() - 35, nave.getCentro().getY() + 15, 15, RED);
                     }
-                }
+                };
+                dibujaCarga(gameState.getNave(), gameState.getTiempoCarga(), gameState.getVidasJugador() > 0);
+                dibujaCarga(gameState.getNave2(), gameState.getTiempoCarga2(), gameState.getVidasJugador2() > 0);
 
                 pintaAsteroides(gameState, tetoTexture);
                 pintaDisparos(gameState, baguetteTexture);
-                pintaNave(gameState, peartoTexture, tetoCharTexture, drTetoTexture, mikuTexture, neruTexture, lukaTexture, kaitoTexture, gumiTexture, rinTexture, lenTexture, meikoTexture, reiTexture);
+                if (gameState.getVidasJugador() > 0) {
+                    pintaNave(gameState.getNave(), gameState.getPersonajeSeleccionado(), peartoTexture, tetoCharTexture, drTetoTexture, mikuTexture, neruTexture, lukaTexture, kaitoTexture, gumiTexture, rinTexture, lenTexture, meikoTexture, reiTexture);
+                }
+                if (gameState.getVidasJugador2() > 0) {
+                    pintaNave(gameState.getNave2(), gameState.getPersonajeSeleccionado2(), peartoTexture, tetoCharTexture, drTetoTexture, mikuTexture, neruTexture, lukaTexture, kaitoTexture, gumiTexture, rinTexture, lenTexture, meikoTexture, reiTexture);
+                }
             }
 
             EndDrawing();
@@ -515,7 +674,9 @@ int main(){
         UnloadTexture(meikoTexture);
         UnloadTexture(reiTexture);
         UnloadTexture(baguetteTexture);
+        UnloadTexture(backgroundTexture);
         UnloadSound(nivelSound);
+        UnloadMusicStream(musica);
         CloseAudioDevice();
         CloseWindow();
         return 0;
