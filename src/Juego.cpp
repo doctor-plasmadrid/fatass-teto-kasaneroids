@@ -210,20 +210,26 @@ void pintaDisparos(GameState& gameState, Texture2D& baguetteTexture) {
     }
 }
 
-void pintaNave(GameState& gameState, Texture2D& peartoTexture, Texture2D& mikuTexture, Texture2D& neruTexture, Texture2D& lukaTexture, Texture2D& kaitoTexture, Texture2D& gumiTexture){
+void pintaNave(GameState& gameState, Texture2D& peartoTexture, Texture2D& tetoCharTexture, Texture2D& drTetoTexture, Texture2D& mikuTexture, Texture2D& neruTexture, Texture2D& lukaTexture, Texture2D& kaitoTexture, Texture2D& gumiTexture, Texture2D& rinTexture, Texture2D& lenTexture, Texture2D& meikoTexture, Texture2D& reiTexture){
     auto& nave = gameState.getNave();
     Vector2 centro = { nave.getCentro().getX(), nave.getCentro().getY() };
     float radio = nave.getRadio();
 
     Texture2D* selectedTexture;
     switch (gameState.getPersonajeSeleccionado()) {
-        case 0: selectedTexture = &peartoTexture; break;
-        case 1: selectedTexture = &mikuTexture; break;
-        case 2: selectedTexture = &neruTexture; break;
-        case 3: selectedTexture = &lukaTexture; break;
-        case 4: selectedTexture = &kaitoTexture; break;
-        case 5: selectedTexture = &gumiTexture; break;
-        default: selectedTexture = &peartoTexture; break;
+        case 0: selectedTexture = &tetoCharTexture; break;
+        case 1: selectedTexture = &drTetoTexture; break;
+        case 2: selectedTexture = &peartoTexture; break;
+        case 3: selectedTexture = &mikuTexture; break;
+        case 4: selectedTexture = &neruTexture; break;
+        case 5: selectedTexture = &lukaTexture; break;
+        case 6: selectedTexture = &kaitoTexture; break;
+        case 7: selectedTexture = &gumiTexture; break;
+        case 8: selectedTexture = &rinTexture; break;
+        case 9: selectedTexture = &lenTexture; break;
+        case 10: selectedTexture = &meikoTexture; break;
+        case 11: selectedTexture = &reiTexture; break;
+        default: selectedTexture = &tetoCharTexture; break;
     }
 
     float targetHeight = radio * 2.0f * 2.5f;
@@ -252,11 +258,17 @@ int main(){
 
         Texture2D tetoTexture = LoadTexture("assets/fatass_teto.png");
         Texture2D peartoTexture = LoadTexture("assets/pearto.png");
+        Texture2D tetoCharTexture = LoadTexture("assets/teto.png");
+        Texture2D drTetoTexture = LoadTexture("assets/dr_teto.png");
         Texture2D mikuTexture = LoadTexture("assets/miku.png");
         Texture2D neruTexture = LoadTexture("assets/neru.png");
         Texture2D lukaTexture = LoadTexture("assets/luka.png");
         Texture2D kaitoTexture = LoadTexture("assets/kaito.png");
         Texture2D gumiTexture = LoadTexture("assets/gumi.png");
+        Texture2D rinTexture = LoadTexture("assets/rin.png");
+        Texture2D lenTexture = LoadTexture("assets/len.png");
+        Texture2D meikoTexture = LoadTexture("assets/meiko.png");
+        Texture2D reiTexture = LoadTexture("assets/rei.png");
         Texture2D baguetteTexture = LoadTexture("assets/baguette.png");
 
         gameState.getEspecial().disparoEspecial();
@@ -278,13 +290,13 @@ int main(){
                 }
             } else if (pantallaPersonaje) {
                 if (IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_A)) {
-                    personajeSeleccionado = (personajeSeleccionado - 1 + 6) % 6;
+                    personajeSeleccionado = (personajeSeleccionado - 1 + 12) % 12;
                 } else if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_D)) {
-                    personajeSeleccionado = (personajeSeleccionado + 1) % 6;
+                    personajeSeleccionado = (personajeSeleccionado + 1) % 12;
                 } else if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) {
-                    personajeSeleccionado = (personajeSeleccionado - 3 + 6) % 6;
+                    personajeSeleccionado = (personajeSeleccionado - 4 + 12) % 12;
                 } else if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S)) {
-                    personajeSeleccionado = (personajeSeleccionado + 3) % 6;
+                    personajeSeleccionado = (personajeSeleccionado + 4) % 12;
                 } else if (IsKeyPressed(KEY_ENTER)) {
                     gameState.setModoInfinito(opcionSeleccionada == 1);
                     gameState.setPersonajeSeleccionado(personajeSeleccionado);
@@ -366,13 +378,13 @@ int main(){
 
                 DrawText("Use UP/DOWN or W/S to select, ENTER to continue", 130, 350, 15, DARKGRAY);
             } else if (pantallaPersonaje) {
-                DrawText("Select Your Character", 200, 100, 20, BLACK);
+                DrawText("Select Your Character", 200, 80, 20, BLACK);
 
                 float iconSize = 80.0f;
-                float startX = 50.0f;
-                float startY = 140.0f;
-                float spacingX = 180.0f;
-                float spacingY = 120.0f;
+                float startX = 20.0f;
+                float startY = 110.0f;
+                float spacingX = 150.0f;
+                float spacingY = 110.0f;
 
                 struct CharacterSlot {
                     float x, y;
@@ -380,16 +392,22 @@ int main(){
                     Texture2D* texture;
                 };
 
-                CharacterSlot slots[6] = {
-                    {startX, startY, "Pearto", &peartoTexture},
-                    {startX + spacingX, startY, "Miku", &mikuTexture},
-                    {startX + spacingX * 2, startY, "Neru", &neruTexture},
-                    {startX, startY + spacingY, "Luka", &lukaTexture},
-                    {startX + spacingX, startY + spacingY, "Kaito", &kaitoTexture},
-                    {startX + spacingX * 2, startY + spacingY, "Gumi", &gumiTexture}
+                CharacterSlot slots[12] = {
+                    {startX, startY, "Teto", &tetoCharTexture},
+                    {startX + spacingX, startY, "Dr. Teto", &drTetoTexture},
+                    {startX + spacingX * 2, startY, "Pearto", &peartoTexture},
+                    {startX + spacingX * 3, startY, "Miku", &mikuTexture},
+                    {startX, startY + spacingY, "Neru", &neruTexture},
+                    {startX + spacingX, startY + spacingY, "Luka", &lukaTexture},
+                    {startX + spacingX * 2, startY + spacingY, "Kaito", &kaitoTexture},
+                    {startX + spacingX * 3, startY + spacingY, "Gumi", &gumiTexture},
+                    {startX, startY + spacingY * 2, "Rin", &rinTexture},
+                    {startX + spacingX, startY + spacingY * 2, "Len", &lenTexture},
+                    {startX + spacingX * 2, startY + spacingY * 2, "Meiko", &meikoTexture},
+                    {startX + spacingX * 3, startY + spacingY * 2, "Rei", &reiTexture}
                 };
 
-                for (int i = 0; i < 6; i++) {
+                for (int i = 0; i < 12; i++) {
                     Rectangle slotRect = { slots[i].x, slots[i].y, iconSize, iconSize };
                     Color bgColor = (i == personajeSeleccionado) ? DARKGRAY : LIGHTGRAY;
                     DrawRectangleRec(slotRect, bgColor);
@@ -410,7 +428,7 @@ int main(){
                     DrawText(slots[i].name, static_cast<int>(slots[i].x + (iconSize - nameWidth) / 2), static_cast<int>(slots[i].y + iconSize + 5), 16, BLACK);
                 }
 
-                DrawText("Use ARROWS or WASD to select, ENTER to confirm", 130, 380, 15, DARKGRAY);
+                DrawText("Use ARROWS or WASD to select, ENTER to confirm", 130, 460, 15, DARKGRAY);
             } else if (gameState.getEstadoGameOver()) {
                 const char* txtMuerte = "GAME OVER";
                 const char* txtReinicio = "Press R o ENTER to retry";
@@ -470,7 +488,7 @@ int main(){
 
                 pintaAsteroides(gameState, tetoTexture);
                 pintaDisparos(gameState, baguetteTexture);
-                pintaNave(gameState, peartoTexture, mikuTexture, neruTexture, lukaTexture, kaitoTexture, gumiTexture);
+                pintaNave(gameState, peartoTexture, tetoCharTexture, drTetoTexture, mikuTexture, neruTexture, lukaTexture, kaitoTexture, gumiTexture, rinTexture, lenTexture, meikoTexture, reiTexture);
             }
 
             EndDrawing();
@@ -478,11 +496,17 @@ int main(){
 
         UnloadTexture(tetoTexture);
         UnloadTexture(peartoTexture);
+        UnloadTexture(tetoCharTexture);
+        UnloadTexture(drTetoTexture);
         UnloadTexture(mikuTexture);
         UnloadTexture(neruTexture);
         UnloadTexture(lukaTexture);
         UnloadTexture(kaitoTexture);
         UnloadTexture(gumiTexture);
+        UnloadTexture(rinTexture);
+        UnloadTexture(lenTexture);
+        UnloadTexture(meikoTexture);
+        UnloadTexture(reiTexture);
         UnloadTexture(baguetteTexture);
         CloseWindow();
         return 0;

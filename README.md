@@ -9,7 +9,8 @@ Fatass Teto Kasaneroids is an enhanced Asteroids clone where you control various
 ## Features
 
 ### Gameplay
-- **6 Playable Characters**: Choose from Pearto, Miku, Neru, Luka, Kaito, or Gumi
+- **12 Playable Characters**: Choose from Teto, Dr. Teto, Pearto, Miku, Neru, Luka, Kaito, Gumi, Rin, Len, Meiko, or Rei
+- **4x3 Character Grid**: Character selection screen with 4 columns and 3 rows for easy navigation
 - **Two Game Modes**:
   - **Single Round**: Clear all asteroids to win
   - **Infinite Rounds**: Progress through increasingly difficult levels, gaining extra lives
@@ -103,12 +104,18 @@ The executable will be created at `./bin/juego_asteroids`
 │   └── Punto2D.cpp
 ├── assets/           # Game assets
 │   ├── fatass_teto.png   # Asteroid texture
+│   ├── teto.png          # Teto character
+│   ├── dr_teto.png       # Dr. Teto character
 │   ├── pearto.png        # Pearto character
 │   ├── miku.png          # Miku character
 │   ├── neru.png          # Neru character
 │   ├── luka.png          # Luka character
 │   ├── kaito.png         # Kaito character
 │   ├── gumi.png          # Gumi character
+│   ├── rin.png           # Rin character
+│   ├── len.png           # Len character
+│   ├── meiko.png         # Meiko character
+│   ├── rei.png           # Rei character
 │   └── baguette.png      # Special attack texture
 ├── lib/              # Raylib library
 ├── bin/              # Build output (created during build)
